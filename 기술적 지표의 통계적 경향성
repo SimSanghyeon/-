@@ -1,0 +1,75 @@
+import selenium
+import requests
+import pandas as pd
+from bs4 import BeautifulSoup
+import time
+import sqlite3
+import numpy as np
+import matplotlib.pyplot as plt
+
+df = pd.read_csv('BTC-KRW.csv')
+
+
+n=7
+
+df['gap']= df['Close']- df['Close'].shift(1)
+df['up']= np.where( df['gap']>0, df['gap'], 0)
+df['down'] = np.where(df['gap']<0, df['gap'], 0)
+df['AU']= df['up'].rolling(window=n).mean().shift(1)
+df['AD']= df['down'].rolling(window=n).mean().shift(1)
+df['RS']= df['AU'] /df['AD']
+df['RSI'] = df['RS']/(1+df['RS'])
+df['signal'] = df['RSI'].rolling(window=n).mean()
+
+df['ma5']= df['Close'].rolling(window=5).mean().shift(1)
+df['ma20'] = df['Close'].rolling(window=20).mean().shift(1)
+
+
+df['buy'] = (df['ma5']> df['ma20']) & (df['ma5'].shift(1) <df['ma20'].shift(1))
+# df['buy'] = (df['RSI']<0.3) &(df['RSI']<df['signal']) &(df['RSI'].shift(1)>df['signal'].shift(1))
+
+df['1d'] = np.where(df['buy'], df['Close'].shift(-1)/df['Close'],1)
+df['3d']= np.where(df['buy'], df['Close'].shift(-3)/df['Close'],1)
+df['1w']= np.where(df['buy'], df['Close'].shift(-7)/df['Close'],1)
+df['2w']= np.where(df['buy'], df['Close'].shift(-14)/df['Close'],1)
+df['1M']= np.where(df['buy'], df['Close'].shift(-30)/df['Close'],1)
+df['3M']= np.where(df['buy'], df['Close'].shift(-90)/df['Close'],1)
+
+
+df['ror1d']=df['Close'].shift(-1)/df['Close']
+df['ror3d']=df['Close'].shift(-3)/df['Close']
+df['ror1w']= df['Close'].shift(-7)/df['Close']
+df['ror2w']=  df['Close'].shift(-14)/df['Close']
+df['ror1M']= df['Close'].shift(-30)/df['Close']
+df['ror3M']= df['Close'].shift(-90)/df['Close']
+
+# print('지표손익비',(df[df['1w']>1]['1w'].mean()-1)/(1-df[df['1w']<1]['1w'].mean()))
+# x=(df[df['1w']>1]['1w'].mean()-1)/(1-df[df['1w']<1]['1w'].mean())
+# print('지표승률', len(df[df['1w']>1])/len(df[df['1w']!=1])  )
+# y=len(df[df['1w']>1])/len(df[df['1w']!=1])
+# print('손익분기점', x*y+y-1)
+# print('일반손익비',(df[df['ror1w']>1]['ror1w'].mean()-1) /(1-df[df['ror1w']<1]['ror1w'].mean()))
+# x=(df[df['ror1w']>1]['ror1w'].mean()-1) /(1-df[df['ror1w']<1]['ror1w'].mean())
+# print('일반승률', len(df[df['ror1w']>1])/len(df[df['ror1w']!=1])  )
+# y=len(df[df['ror1w']>1])/len(df[df['ror1w']!=1])
+# print( '손익분기점',x*y+y-1)
+
+
+for i in ['1d','3d','1w','2w','1M','3M']:
+    print(i)
+    print('지표손익비', (df[df[i] > 1][i].mean() - 1) / (1 - df[df[i] < 1][i].mean()))
+    x = (df[df[i] > 1][i].mean() - 1) / (1 - df[df[i] < 1][i].mean())
+    print('지표승률', len(df[df[i] > 1]) / len(df[df[i] != 1]))
+    y = len(df[df[i] > 1]) / len(df[df[i] != 1])
+    print('손익분기점', x * y + y - 1)
+    print('일반손익비', (df[df['ror'+i] > 1]['ror'+i].mean() - 1) / (1 - df[df['ror'+i] < 1]['ror'+i].mean()))
+    x = (df[df['ror'+i] > 1]['ror'+i].mean() - 1) / (1 - df[df['ror'+i] < 1]['ror'+i].mean())
+    print('일반승률', len(df[df['ror'+i] > 1]) / len(df[df['ror'+i] != 1]))
+    y = len(df[df['ror'+i] > 1]) / len(df[df['ror'+i] != 1])
+    print('손익분기점', x * y + y - 1)
+
+    print('')
+# df.to_csv('larry.csv')
+# plt.hist(df[df['1w']!=1]['1w'], bins=20,normed=True,alpha=0.5)
+# plt.hist(df[df['ror1w']!=1]['ror1w'], bins=20, normed=True ,alpha=0.5)
+# plt.show()
